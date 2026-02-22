@@ -108,3 +108,5 @@ async def on_startup() -> None:
     """插件启动时获取一次 CloudNet Token"""
     if not await get_auth_token():
         logger.error("插件启动时获取Token失败，请检查配置")
+    else:
+        logger.info("成功获取Token")
