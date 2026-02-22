@@ -1,4 +1,3 @@
-import token_updater
 from nonebot.plugin import PluginMetadata
 
 __plugin_meta__ = PluginMetadata(
