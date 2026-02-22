@@ -22,23 +22,30 @@ async def get_auth_token() -> bool:
     headers = {"Authorization": f"Basic {auth_b64}", "Content-Type": "application/json"}
 
     # 2. 发送 POST 请求
-    async with aiohttp.ClientSession() as session, session.post(
-        f"{config.CLOUDNET_API_URL}/auth",
-        headers=headers,
-        json={},
-        timeout=10
-    ) as resp:
-        # 3. 处理响应
-        if resp.status != 200:  # noqa: PLR2004
-            logger.error(f"获取Token失败：{resp.status} {await resp.text()}")
-            return False
+    try:
+        async with aiohttp.ClientSession() as session, session.post(
+            f"{config.CLOUDNET_API_URL}/auth",
+            headers=headers,
+            json={},
+            timeout=10
+        ) as resp:
+            # 3. 处理响应
+            if resp.status != 200:  # noqa: PLR2004
+                logger.error(f"获取Token失败：{resp.status} {await resp.text()}")
+                return False
 
-        token_data = await resp.json()
-        access_token = token_data.get("accessToken", {}).get("token")
-        refresh_token = token_data.get("refreshToken", {}).get("token")
-        Config.CLOUDNET_ACCESS_TOKEN = access_token
-        Config.CLOUDNET_REFRESH_TOKEN = refresh_token
-        return True
+            token_data = await resp.json()
+            access_token = token_data.get("accessToken", {}).get("token")
+            refresh_token = token_data.get("refreshToken", {}).get("token")
+            Config.CLOUDNET_ACCESS_TOKEN = access_token
+            Config.CLOUDNET_REFRESH_TOKEN = refresh_token
+            return True
+    except aiohttp.ClientError as e:
+        logger.error(f"获取Token时发生网络异常：{e},请检查CloudNet是否正常运行")
+        return False
+    except ValueError as e:
+        logger.error(f"解析Token响应时发生异常：{e}")
+        return False
 
 """
 api接口，确认token是否有效
@@ -110,3 +117,5 @@ async def on_startup() -> None:
         logger.error("插件启动时获取Token失败，请检查配置")
     else:
         logger.info("成功获取Token")
+
+logger.info("CloudNet Bot Token Updater 已加载")

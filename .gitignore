@@ -1,6 +1,4 @@
 
-# ========== Python通用忽略项（必加） ==========
-config.py
 # Python编译后的字节码文件
 __pycache__/
 *.py[cod]
