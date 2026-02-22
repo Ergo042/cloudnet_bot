@@ -1,0 +1,32 @@
+# ========== 针对config的核心配置 ==========
+config.py
+
+# ========== Python通用忽略项（必加） ==========
+# Python编译后的字节码文件
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 虚拟环境目录（如venv/、env/）
+venv/
+env/
+ENV/
+.venv/
+
+# 依赖包清单（如果用pip freeze生成，可根据需求决定是否忽略）
+# requirements.txt  # 建议保留，方便团队安装依赖
+# 但忽略依赖安装后的目录
+*.egg-info/
+dist/
+build/
+
+# 日志文件
+*.log
+logs/
+
+# 编辑器/IDE配置文件（根据自己使用的工具添加）
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store  # Mac系统的隐藏文件
