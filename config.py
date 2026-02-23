@@ -12,7 +12,7 @@ class Config(BaseModel):
     CLOUDNET_PASSWORD: str
     CLOUDNET_ACCESS_TOKEN: Optional[str] = None
     CLOUDNET_REFRESH_TOKEN: Optional[str] = None
-    CLOUDENT_REFRESH_TIME: Optional[int] = None  # token刷新时间，单位秒
+    CLOUDNET_REFRESH_TIME: Optional[int] = None  # token刷新时间，单位秒
 
     @field_validator("CLOUDNET_USERNAME")
     def validate_username(cls, value: str) -> str:  # noqa: N805

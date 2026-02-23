@@ -37,8 +37,8 @@ async def get_auth_token() -> bool:
             token_data = await resp.json()
             access_token = token_data.get("accessToken", {}).get("token")
             refresh_token = token_data.get("refreshToken", {}).get("token")
-            Config.CLOUDNET_ACCESS_TOKEN = access_token
-            Config.CLOUDNET_REFRESH_TOKEN = refresh_token
+            config.CLOUDNET_ACCESS_TOKEN = access_token
+            config.CLOUDNET_REFRESH_TOKEN = refresh_token
             return True
     except aiohttp.ClientError as e:
         logger.error(f"获取Token时发生网络异常：{e},请检查CloudNet是否正常运行")
@@ -57,7 +57,7 @@ async def check_token_validity() -> bool:
         return False
 
     headers = {"Authorization": f"Bearer {config.CLOUDNET_ACCESS_TOKEN}"}
-    async with aiohttp.ClientSession() as session, session.get(
+    async with aiohttp.ClientSession() as session, session.post(
         f"{config.CLOUDNET_API_URL}/auth/verify",
         headers=headers,
         timeout=10
@@ -90,14 +90,14 @@ async def refresh_auth_token() -> bool:
         token_data = await resp.json()
         access_token = token_data.get("accessToken", {}).get("token")
         refresh_token = token_data.get("refreshToken", {}).get("token")
-        Config.CLOUDNET_ACCESS_TOKEN = access_token
-        Config.CLOUDNET_REFRESH_TOKEN = refresh_token
+        config.CLOUDNET_ACCESS_TOKEN = access_token
+        config.CLOUDNET_REFRESH_TOKEN = refresh_token
         return True
 
 """
 定时任务，每隔一定时间检查并刷新Token
 """
-@scheduler.scheduled_job("interval", seconds=config.CLOUDENT_REFRESH_TIME or 300)
+@scheduler.scheduled_job("interval", seconds=config.CLOUDNET_REFRESH_TIME or 300)
 async def scheduled_token_refresh() -> None:
     """定时检查并刷新 CloudNet Token,失败则重新获取"""
     if not await check_token_validity():
