@@ -12,6 +12,11 @@ from .config import Config
 from .utils import api, parse_service_data
 from .utils.resolve import tasks_data
 from .utils.tools import update_config_param
+from nonebot import require
+
+require("nonebot_plugin_htmlkit")
+
+from nonebot_plugin_htmlkit import html_to_pic, md_to_pic, template_to_pic, text_to_pic
 
 # ========================帮助指令========================
 help_cmd = on_command(
@@ -100,7 +105,7 @@ async def handle_default_reply(
 # 获取服务器信息命令
 get_services_cmd = on_command(
     cmd="获取服务器信息",
-    aliases={"查询服务器信息", "查看服务器状态"},
+    aliases={"查询", "查看服务器状态"},
     priority=60,
     block=True
 )
@@ -131,20 +136,20 @@ async def handle_get_services(event: MessageEvent):
         service_cards = []
         for idx, info in enumerate(services_info, 1):
             card = f"""
-    ┌────────── 服务器 {idx} ──────────
-    │ 📛 服务名称：{info['服务名称']}
-    │ 🆔 唯一ID：{info['uniqueId']}
-    │ 📌 服务类型：{info['服务类型']}
-    │ 🔧 服务模版：{info['服务模版']}
-    │ 📍 绑定地址：{info['绑定地址']}
-    │ 🕒 创建时间：{info['创建时间']}
-    │ 🟢 运行状态：{info['运行状态']}
-    │ 🆔 进程PID：{info['PID']}
-    │ 📊 CPU使用率：{info['CPU 使用率']}
-    │ 📈 内存使用：{info['内存使用']}
-    │ 👥 在线人数：{info['在线人数']}
-    │ 🎯 服务版本：{info['服务版本']}
-    └───────────────────────────────"""
+服务器 {idx}
+📛 服务名称：{info['服务名称']}
+📌 服务类型：{info['服务类型']}
+🔧 服务模版：{info['服务模版']}
+📍 绑定地址：{info['绑定地址']}
+🕒 创建时间：
+{info['创建时间']}
+🟢 运行状态：{info['运行状态']}
+📊 CPU使用率：{info['CPU 使用率']}
+📈 内存使用：
+{info['内存使用']}
+👥 在线人数：{info['在线人数']}
+🎯 服务版本：{info['服务版本']}
+───────────────"""
             service_cards.append(card)
         
         # 最终消息拼接
@@ -255,7 +260,7 @@ async def handle_delete_service(CommandArg: Message = CommandArg()):
 #服务器的生命周期操作
 start_service_cmd = on_command(
     cmd="启动服务器",
-    aliases={"开启服务器", "运行服务器"},
+    aliases={"开启服务器", "运行服务器","启动"},
     priority=15,
     block=True
 )
@@ -283,7 +288,7 @@ async def handle_start_service(CommandArg: Message = CommandArg()):
 
 restart_service_cmd = on_command(
     cmd="重启服务器",
-    aliases={"重启服务器", "重新启动服务器"},
+    aliases={"重启", "重新启动服务器"},
     priority=15,
     block=True
 )
@@ -311,7 +316,7 @@ async def handle_restart_service(arg: Message = CommandArg()):
 
 stop_service_cmd = on_command(
     cmd="停止服务器",
-    aliases={"关闭服务器", "停止运行服务器"},
+    aliases={"关闭服务器", "停止运行服务器", "关闭"},
     priority=15,
     block=True
 )
@@ -336,3 +341,46 @@ async def handle_stop_service(CommandArg: Message = CommandArg()):
             )
     except FinishedException:
         pass  # 正常结束，不处理
+
+get_online_players_cmd = on_command(
+    cmd="获取在线人数",
+    aliases={"在线人数", "查看在线人数"},
+    priority=15,
+    block=True
+)
+@get_online_players_cmd.handle()
+async def handle_get_online_players(CommandArg: Message = CommandArg()):
+    try:
+        result = await api.get_online_players()
+        if result is not None:
+            await get_online_players_cmd.finish(
+                MessageSegment.text(f"🎉 当前在线人数：{result}人")
+            )
+        else:
+            await get_online_players_cmd.finish(
+                MessageSegment.text("❌ 获取在线人数失败，请检查API连接！")
+            )
+    except FinishedException:
+        pass  # 正常结束，不处理
+
+get_registered_players_cmd = on_command(
+    cmd="获取注册人数",
+    aliases={"注册人数", "查看注册人数"},
+    priority=15,
+    block=True
+)
+@get_registered_players_cmd.handle()
+async def handle_get_registered_players(CommandArg: Message = CommandArg()):
+    try:
+        result = await api.get_num_of_players()
+        if result is not None:
+            await get_registered_players_cmd.finish(
+                MessageSegment.text(f"🎉 当前注册人数：{result}人")
+            )
+        else:
+            await get_registered_players_cmd.finish(
+                MessageSegment.text("❌ 获取注册人数失败，请检查API连接！")
+            )
+    except FinishedException:
+        pass  # 正常结束，不处理
+

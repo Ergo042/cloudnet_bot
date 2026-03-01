@@ -169,3 +169,47 @@ async def life_cycle_action(
     except Exception as e:
         logger.error(f"❌ 服务 {service_id} 执行 {action} 异常：{e}")
     return False
+
+async def get_num_of_players() -> Optional[Dict[str, int]]:
+    """
+    获取注册人数
+    """
+    headers = _build_auth_headers()
+    if not headers:
+        return None
+    url = f"{BASE_URL}/player/registeredCount"
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers, timeout=10) as response:
+                if response.status == 200:
+                    props = await response.json()
+                    registered_count = props.get("registeredCount", 0)
+                    logger.info(f"✅ 获取到注册人数：{registered_count}")
+                    return registered_count
+                else:
+                    logger.error(f"❌ 获取注册人数失败：HTTP {response.status}")
+    except Exception as e:
+        logger.error(f"❌ 获取注册人数异常：{e}")
+    return None
+
+async def get_online_players() -> Optional[Dict[str, int]]:
+    """
+    获取在线人数
+    """
+    headers = _build_auth_headers()
+    if not headers:
+        return None
+    url = f"{BASE_URL}/player/onlineCount"
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers, timeout=10) as response:
+                if response.status == 200:
+                    props = await response.json()
+                    online_count = props.get("onlineCount", 0)
+                    logger.info(f"✅ 获取到在线人数：{online_count}")
+                    return online_count
+                else:
+                    logger.error(f"❌ 获取在线人数失败：HTTP {response.status}")
+    except Exception as e:
+        logger.error(f"❌ 获取在线人数异常：{e}")
+    return None

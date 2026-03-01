@@ -11,12 +11,12 @@ def parse_service_data(services: List[Dict[str, Any]]) -> List[Dict[str, str]]:
     parsed_result = []
     for service in services:
         # 提取各层级字段（容错处理，避免字段缺失报错）
-        address = service.get("address", {})
-        process_snap = service.get("processSnapshot", {})
-        config = service.get("configuration", {})
-        props = service.get("properties", {})
+        address: dict = service.get("address", {})
+        process_snap: dict = service.get("processSnapshot", {})
+        config: dict = service.get("configuration", {})
+        props: dict = service.get("properties", {})
         # 修复：service_id 是字符串/字典，加容错，避免 get 报错
-        service_id = config.get("serviceId", {}) or {}
+        service_id: dict = config.get("serviceId", {})
 
         # 数据格式化（时间戳转时间、字节转 MB）
         # 修复：处理 0 时间戳，避免 datetime 报错
