@@ -381,7 +381,7 @@ async def handle_get_online_players(CommandArg: Message = CommandArg()):
 
 get_registered_players_cmd = on_command(
     cmd="获取注册人数",
-    aliases={"查询注册人数", "查看注册人数"},
+    aliases={"查询注册人数", "注册人数"},
     priority=15,
     block=True
 )
