@@ -13,6 +13,12 @@ class Config(BaseModel):
     CLOUDNET_ACCESS_TOKEN: Optional[str] = None
     CLOUDNET_REFRESH_TOKEN: Optional[str] = None
     CLOUDNET_REFRESH_TIME: Optional[int] = None  # token刷新时间，单位秒
+        # MySQL 配置
+    MYSQL_HOST: str = "localhost"
+    MYSQL_PORT: int
+    MYSQL_USER: str = "root"
+    MYSQL_PASSWORD: Optional[str] = None
+    MYSQL_DB: str = "cloudnet"
 
     @field_validator("CLOUDNET_USERNAME")
     def validate_username(cls, value: str) -> str:  # noqa: N805

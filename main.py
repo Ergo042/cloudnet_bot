@@ -13,6 +13,15 @@ from .utils import api, parse_service_data
 from .utils.resolve import tasks_data
 from .utils.tools import update_config_param
 from nonebot import require
+from .MySQL_tools import bind_qq_uuid, init_db_tables
+
+# 服务器启动时初始化数据库
+from nonebot import get_driver
+
+driver = get_driver()
+@driver.on_startup
+async def _():
+    await init_db_tables()
 
 require("nonebot_plugin_htmlkit")
 
@@ -391,3 +400,45 @@ async def handle_get_registered_players(CommandArg: Message = CommandArg()):
     except FinishedException:
         pass  # 正常结束，不处理
 
+
+
+
+# 绑定发言用户qq号与游戏name的命令
+bind_player_cmd = on_command(
+    cmd="绑定账号",
+    aliases={"绑定游戏名", "bind"},
+    priority=15,
+    block=True
+)
+
+@bind_player_cmd.handle()
+async def handle_bind_player(event: MessageEvent, args: Message = CommandArg()):
+    # 1. 获取用户QQ号
+    qq_id = event.get_user_id()
+    
+    # 2. 获取用户输入的游戏名
+    game_name = args.extract_plain_text().strip()
+    
+    if not game_name:
+        await bind_player_cmd.finish(
+            MessageSegment.text("❌ 请输入游戏名！\n格式：绑定账号 <游戏名>")
+        )
+    
+    await bind_player_cmd.send(MessageSegment.text(f"🔍 正在查找玩家 {game_name}..."))
+    
+    # 3. 调用绑定函数
+    try:
+        success = await bind_qq_uuid(qq_id, game_name)
+        if success:
+            await bind_player_cmd.finish(
+                MessageSegment.text(f"🎉 绑定成功！\nQQ：{qq_id}\n游戏名：{game_name}")
+            )
+        else:
+            await bind_player_cmd.finish(
+                MessageSegment.text("❌ 绑定失败！\n可能原因：\n1. 玩家不存在 (请确认大小写)\n2. 数据库连接异常")
+            )
+    except Exception as e:
+        logger.error(f"绑定账号异常：{str(e)}", exc_info=True)
+        await bind_player_cmd.finish(
+            MessageSegment.text(f"❌ 系统错误：{str(e)}")
+        )
