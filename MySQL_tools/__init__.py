@@ -1,17 +1,35 @@
 import json
+import pymysql
 from typing import Optional, Dict, Any
 from nonebot import logger
+from ..config import config
 from .basic_func import execute_query, execute_update
 
 async def init_db_tables():
     """初始化数据库表"""
+    # 检查并创建数据库
+    try:
+        connection = pymysql.connect(
+            host=config.MYSQL_HOST,
+            port=config.MYSQL_PORT,
+            user=config.MYSQL_USER,
+            password=config.MYSQL_PASSWORD,
+            charset='utf8mb4'
+        )
+        with connection.cursor() as cursor:
+            cursor.execute(f"CREATE DATABASE IF NOT EXISTS `{config.MYSQL_DB_NONEBOT}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;")
+            logger.info(f"✅ 数据库 {config.MYSQL_DB_NONEBOT} 检查/创建成功")
+        connection.close()
+    except Exception as e:
+        logger.error(f"❌ 数据库 {config.MYSQL_DB_NONEBOT} 创建/检查失败: {e}")
+
     query = """
     CREATE TABLE IF NOT EXISTS qq_bind (
         qq_id VARCHAR(20) PRIMARY KEY,
         game_uuid VARCHAR(64) NOT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     """
-    if execute_update(query):
+    if execute_update(query, db_name=config.MYSQL_DB_NONEBOT):
         logger.info("✅ 数据库表 qq_bind 检查/创建成功")
     else:
         logger.error("❌ 数据库表 qq_bind 创建失败")
@@ -33,12 +51,12 @@ async def get_player_data(player_name: str) -> Optional[Dict[str, Any]]:
     search_json_part = f'%"name": "{player_name}"%'
     query = "SELECT Name, Document FROM cloudnet_cloud_players WHERE Document LIKE %s LIMIT 1"
     
-    result = execute_query(query, (search_json_part,))
+    result = execute_query(query, (search_json_part,), db_name=config.MYSQL_DB_CLOUDNET)
     
     # 2. 如果没搜到，尝试是否本身输入的即为 UUID (匹配 Name 列)
     if not result:
         query_uuid = "SELECT Name, Document FROM cloudnet_cloud_players WHERE Name = %s LIMIT 1"
-        result = execute_query(query_uuid, (player_name,))
+        result = execute_query(query_uuid, (player_name,), db_name=config.MYSQL_DB_CLOUDNET)
     
     if result and len(result) > 0:
         try:
@@ -84,7 +102,7 @@ async def bind_qq_uuid(qq_id: str, name_or_uuid: str) -> bool:
     VALUES (%s, %s) 
     ON DUPLICATE KEY UPDATE game_uuid = VALUES(game_uuid)
     """
-    if execute_update(query, (qq_id, game_uuid)):
+    if execute_update(query, (qq_id, game_uuid), db_name=config.MYSQL_DB_NONEBOT):
         logger.info(f"✅ 绑定成功: QQ {qq_id} -> {real_name} ({game_uuid})")
         return True
     return False
@@ -92,9 +110,34 @@ async def bind_qq_uuid(qq_id: str, name_or_uuid: str) -> bool:
 async def get_bound_uuid(qq_id: str) -> Optional[str]:
     """获取 QQ 号绑定的游戏 UUID"""
     query = "SELECT game_uuid FROM qq_bind WHERE qq_id = %s"
-    result = execute_query(query, (qq_id,))
+    result = execute_query(query, (qq_id,), db_name=config.MYSQL_DB_NONEBOT)
     if result and len(result) > 0:
         return result[0]['game_uuid']
     return None
 
+'''
+{"name": "Ergo", "properties": {}, "lastLoginTimeMillis": 1772616215962, "firstLoginTimeMillis": 1772616215962, "lastNetworkPlayerProxyInfo": {"name": "Ergo", "xBoxId": null, "address": {"host": "0:0:0:0:0:0:0:1", "port": 34792}, "version": 774, "listener": {"host": "0.0.0.0", "port": 25565}, "uniqueId": "b8a0c272-f969-37b5-8742-f39a2f56e94f", "onlineMode": true, "networkService": {"groups": ["Global-Proxy", "Proxy"], "serviceId": {"taskName": "Proxy", "uniqueId": "4f07d99f-de3a-4f92-bc39-c3fe9513ecb8", "environment": {"name": "VELOCITY", "properties": {"isJavaProxy": true}, "defaultProcessArguments": [], "defaultServiceStartPort": 25565}, "allowedNodes": [], "nameSplitter": "-", "nodeUniqueId": "Node-1", "taskServiceId": 1, "environmentName": "VELOCITY"}}}}
+json示例
+'''
 
+async def get_player_last_login(qq_id: str) -> Optional[int]:
+    """
+    获取 QQ 号绑定的玩家上次登录时间
+    :param qq_id: QQ号
+    :return: 上次登录时间戳 (毫秒) or None
+    """
+    # 1. 获取QQ绑定的UUID
+    game_uuid = await get_bound_uuid(qq_id)
+    if not game_uuid:
+        logger.warning(f"⚠️ QQ {qq_id} 未绑定任何游戏UUID")
+        return None
+    
+    # 2. 查询玩家数据
+    # get_player_data 可以接受 UUID 作为参数
+    player_data = await get_player_data(game_uuid)
+    
+    if player_data and player_data.get('lastLoginTimeMillis'):
+        return player_data['lastLoginTimeMillis']
+    
+    logger.warning(f"⚠️ 无法获取玩家 {game_uuid} 的登录时间")
+    return None

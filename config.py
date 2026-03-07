@@ -15,22 +15,11 @@ class Config(BaseModel):
     CLOUDNET_REFRESH_TIME: Optional[int] = None  # token刷新时间，单位秒
         # MySQL 配置
     MYSQL_HOST: str = "localhost"
-    MYSQL_PORT: int
+    MYSQL_PORT: int = 45678
     MYSQL_USER: str = "root"
     MYSQL_PASSWORD: Optional[str] = None
-    MYSQL_DB: str = "cloudnet"
-
-    @field_validator("CLOUDNET_USERNAME")
-    def validate_username(cls, value: str) -> str:  # noqa: N805
-        if not value:
-            raise ValueError("CLOUDNET_USERNAME不能为空")
-        return value
-
-    @field_validator("CLOUDNET_PASSWORD")
-    def validate_password(cls, value: str) -> str:  # noqa: N805
-        if not value:
-            raise ValueError("CLOUDNET_PASSWORD不能为空")
-        return value
+    MYSQL_DB_CLOUDNET: str = "cloudnet"  # cloudnet 数据所在数据库
+    MYSQL_DB_NONEBOT: str = "nonebot"    # bot 数据所在数据库 (qq绑定等)
 
 # ===============================创建实例===============================
 config = get_plugin_config(Config)

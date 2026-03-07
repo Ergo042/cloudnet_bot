@@ -13,7 +13,7 @@ from .utils import api, parse_service_data
 from .utils.resolve import tasks_data
 from .utils.tools import update_config_param
 from nonebot import require
-from .MySQL_tools import bind_qq_uuid, init_db_tables
+from .MySQL_tools import bind_qq_uuid, init_db_tables, get_player_last_login
 
 # 服务器启动时初始化数据库
 from nonebot import get_driver
@@ -415,17 +415,17 @@ bind_player_cmd = on_command(
 async def handle_bind_player(event: MessageEvent, args: Message = CommandArg()):
     # 1. 获取用户QQ号
     qq_id = event.get_user_id()
-    
+
     # 2. 获取用户输入的游戏名
     game_name = args.extract_plain_text().strip()
-    
+
     if not game_name:
         await bind_player_cmd.finish(
             MessageSegment.text("❌ 请输入游戏名！\n格式：绑定账号 <游戏名>")
         )
-    
+
     await bind_player_cmd.send(MessageSegment.text(f"🔍 正在查找玩家 {game_name}..."))
-    
+
     # 3. 调用绑定函数
     try:
         success = await bind_qq_uuid(qq_id, game_name)
@@ -433,12 +433,66 @@ async def handle_bind_player(event: MessageEvent, args: Message = CommandArg()):
             await bind_player_cmd.finish(
                 MessageSegment.text(f"🎉 绑定成功！\nQQ：{qq_id}\n游戏名：{game_name}")
             )
+            return None
         else:
             await bind_player_cmd.finish(
                 MessageSegment.text("❌ 绑定失败！\n可能原因：\n1. 玩家不存在 (请确认大小写)\n2. 数据库连接异常")
             )
+            return None
+    except FinishedException:
+        pass  # 正常结束，不处理
     except Exception as e:
         logger.error(f"绑定账号异常：{str(e)}", exc_info=True)
         await bind_player_cmd.finish(
+            MessageSegment.text(f"❌ 系统错误：{str(e)}")
+        )
+
+# ========================查询上次登录时间========================
+last_login_cmd = on_command(
+    cmd="cloudnet查询上次登录",
+    aliases={"查询上次登录", "上次登录", "lastlogin"},
+    priority=15,
+    block=True
+)
+
+@last_login_cmd.handle()
+async def handle_last_login(event: MessageEvent, args: Message = CommandArg()):
+    # 1. 确定要查询的 QQ 号
+    target_qq = None
+    
+    # 检查是否有艾特
+    at_list = event.get_message().get("at")
+    if at_list:
+        target_qq = at_list[0].data.get("qq")
+
+    # 检查是否有参数 (纯数字 QQ 号)
+    if not target_qq:
+        args_text = args.extract_plain_text().strip()
+        if args_text.isdigit():
+            target_qq = args_text
+            
+    # 如果都没有，查自己
+    if not target_qq:
+        target_qq = event.get_user_id()
+
+    # 2. 调用查询函数
+    try:
+        if login_millis := await get_player_last_login(target_qq):
+            # 转换时间戳 (System.currentTimeMillis() 是毫秒)
+            login_time = datetime.datetime.fromtimestamp(login_millis / 1000)
+            time_str = login_time.strftime("%Y-%m-%d %H:%M:%S")
+            
+            await last_login_cmd.finish(
+                MessageSegment.text(f"🕒 玩家上次登录时间为：\n{time_str}\n(QQ: {target_qq})")
+            )
+        else:
+            await last_login_cmd.finish(
+                MessageSegment.text(f"❌ 未找到记录！\n(QQ: {target_qq})\n可能原因：\n1. 该 QQ 未绑定游戏账号\n2. 游戏账号无登录记录\n3. 数据库连接异常")
+            )
+    except FinishedException:
+        pass  # 正常结束，不处理
+    except Exception as e:
+        logger.error(f"查询上次登录时间异常：{str(e)}", exc_info=True)
+        await last_login_cmd.finish(
             MessageSegment.text(f"❌ 系统错误：{str(e)}")
         )
